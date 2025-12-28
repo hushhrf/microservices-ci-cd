@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: microservices
+data:
+  # Database Configuration
+  DB_HOST: "microservices-cluster-postgres.clqeyqggc5da.us-east-1.rds.amazonaws.com"
+  DB_PORT: "5432"
+  DB_NAME: "microservice"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Kafka Configuration
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  KAFKA_TOPIC_NAME: "notification-events"
+  KAFKA_CONSUMER_GROUP_ID: "notification-group"
+  
+  # Eureka Configuration
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
+  
+  # Config Server
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  
+  # Spring Profiles
+  SPRING_PROFILES_ACTIVE: "kubernetes"
+  
+  # Gateway Route Overrides (Fix for Uppercase Eureka IDs)
+  SPRING_CLOUD_GATEWAY_ROUTES_0_ID: "auth-service-fix"
+  SPRING_CLOUD_GATEWAY_ROUTES_0_URI: "lb://AUTH-SERVICE"
+  SPRING_CLOUD_GATEWAY_ROUTES_0_PREDICATES_0: "Path=/v1/auth/**"
+  SPRING_CLOUD_GATEWAY_ROUTES_1_ID: "user-service-fix"
+  SPRING_CLOUD_GATEWAY_ROUTES_1_URI: "lb://USER-SERVICE"
+  SPRING_CLOUD_GATEWAY_ROUTES_1_PREDICATES_0: "Path=/v1/user/**"
+  SPRING_CLOUD_GATEWAY_ROUTES_2_ID: "job-service-fix"
+  SPRING_CLOUD_GATEWAY_ROUTES_2_URI: "lb://JOB-SERVICE"
+  SPRING_CLOUD_GATEWAY_ROUTES_2_PREDICATES_0: "Path=/v1/job-service/**"
+  SPRING_CLOUD_GATEWAY_ROUTES_3_ID: "notification-service-fix"
+  SPRING_CLOUD_GATEWAY_ROUTES_3_URI: "lb://NOTIFICATION-SERVICE"
+  SPRING_CLOUD_GATEWAY_ROUTES_3_PREDICATES_0: "Path=/v1/notification/**"
+  SPRING_CLOUD_GATEWAY_ROUTES_4_ID: "file-storage-fix"
+  SPRING_CLOUD_GATEWAY_ROUTES_4_URI: "lb://FILE-STORAGE"
+  SPRING_CLOUD_GATEWAY_ROUTES_4_PREDICATES_0: "Path=/v1/file-storage/**"
+  
+  # Spring Cloud Config Retry Settings
+  SPRING_CLOUD_CONFIG_FAILFAST: "false"
+  SPRING_CLOUD_CONFIG_RETRY_INITIALINTERVAL: "2000"
+  SPRING_CLOUD_CONFIG_RETRY_MAXINTERVAL: "10000"
+  SPRING_CLOUD_CONFIG_RETRY_MAXATTEMPTS: "10"

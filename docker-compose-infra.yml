@@ -1,0 +1,23 @@
+﻿version: '3.8'
+networks:
+  microservices-net:
+    driver: bridge
+volumes:
+  postgres_data:
+  redis_data:
+services:
+  postgres:
+    container_name: postgres-test
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 55
+      POSTGRES_DB: microservice
+    ports: ["5433:5432"]
+    networks: ["microservices-net"]
+  redis:
+    container_name: redis-test
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --requirepass redispass
+    ports: ["6380:6379"]
+    networks: ["microservices-net"]
