@@ -71,37 +71,23 @@ spec:
                 container('kubectl') {
                     script {
                         echo 'Configuring kubectl...'
-                        // EKS authentication requires aws-cli. 
-                        // bitnami/kubectl does NOT have aws-cli.
-                        // We need a container with BOTH or use a token.
-                        // Since we are inside the cluster, we might not need 'aws eks update-kubeconfig' if RBAC is correct.
-                        // However, 'aws eks update-kubeconfig' generates the ~/.kube/config.
-                        // 
-                        // ALTERNATIVE: Use an image with both aws-cli and kubectl.
-                        // 'amazon/aws-cli' has aws, but installing kubectl is executing steps.
-                        // 'bitnami/kubectl' has no aws-cli.
-                        // 
-                        // Let's try to trust the service account injection.
-                        // If the pod has 'serviceAccountName: jenkins-sa', it usually auto-mounts credentials.
-                        // But standard kubectl needs a config file pointing to the API server.
-                        // In-cluster config is supported by kubectl by default if KUBERNETES_SERVICE_HOST is set.
-                        // We just need to ensure context is set or just run commands.
+                        // Jenkins ServiceAccount has ClusterAdmin permissions (verified in jenkins-sa.yaml)
+                        // It injects credentials automatically, so we DO NOT need aws-cli or update-kubeconfig.
+                        // We rely on standard in-cluster Kubernetes configuration.
                         
                         echo 'Deploying changes...'
                         
-                        // Apply common resources first
+                        // Apply common resources explicitly to microservices namespace where applicable
                         sh 'kubectl apply -f kubernetes/namespace.yaml'
-                        sh 'kubectl apply -f kubernetes/configmaps/'
-                        sh 'kubectl apply -f kubernetes/secrets/db-secrets.yaml || true'
+                        // ConfigMaps and Secrets should be in microservices namespace
+                        sh 'kubectl apply -f kubernetes/configmaps/ -n microservices'
+                        sh 'kubectl apply -f kubernetes/secrets/db-secrets.yaml -n microservices || true'
                         
                         def services = env.SERVICES.split(' ')
                         for (def service : services) {
                             def yamlFile = "kubernetes/deployments/${service}.yaml"
-                            // For Option A, we assume 'latest' or manual tag management since we aren't building here.
-                            // If we want to use the specific build number, we'd need to have pushed it locally first.
-                            // For simplicity, let's just apply the YAMLs "as is" or update to 'latest'.
-                            
-                            sh "kubectl apply -f ${yamlFile}"
+                            // Apply to microservices namespace explicitly
+                            sh "kubectl apply -f ${yamlFile} -n microservices"
                         }
                         
                         echo 'Waiting for rollout...'
