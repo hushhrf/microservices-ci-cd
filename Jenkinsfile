@@ -26,6 +26,13 @@ spec:
     volumeMounts:
     - name: kaniko-secret
       mountPath: /kaniko/.docker
+    - name: workspace
+      mountPath: /home/jenkins/agent
+  - name: kubectl
+    image: bitnami/kubectl:latest
+    command:
+    - cat
+    tty: true
   volumes:
   - name: kaniko-secret
     secret:
@@ -33,6 +40,8 @@ spec:
       items:
       - key: .dockerconfigjson
         path: config.json
+  - name: workspace
+    emptyDir: {}
 """
         }
     }
@@ -78,9 +87,11 @@ spec:
                                 sh "/kaniko/executor --context ./${service} --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest"
                             }
                             
-                            echo "Deploying ${service}..."
-                            sh "kubectl apply -f kubernetes/deployments/${service}.yaml -n microservices"
-                            sh "kubectl rollout restart deployment/${service} -n microservices"
+                            container('kubectl') {
+                                echo "Deploying ${service}..."
+                                sh "kubectl apply -f kubernetes/deployments/${service}.yaml -n microservices"
+                                sh "kubectl rollout restart deployment/${service} -n microservices"
+                            }
                         }
                     }
                 }
