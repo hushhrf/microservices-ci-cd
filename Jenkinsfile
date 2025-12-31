@@ -13,6 +13,13 @@ spec:
   - name: jnlp
     image: jenkins/inbound-agent:latest
     tty: true
+    resources:
+      requests:
+        cpu: "50m"
+        memory: "128Mi"
+      limits:
+        cpu: "100m"
+        memory: "256Mi"
 """
         }
     }
