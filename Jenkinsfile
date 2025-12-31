@@ -12,14 +12,27 @@ spec:
   containers:
   - name: jnlp
     image: jenkins/inbound-agent:latest
+  - name: maven
+    image: maven:3.8.6-openjdk-18
+    command:
+    - cat
     tty: true
-    resources:
-      requests:
-        cpu: "50m"
-        memory: "128Mi"
-      limits:
-        cpu: "100m"
-        memory: "256Mi"
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command:
+    - sleep
+    args:
+    - 9999999
+    volumeMounts:
+    - name: kaniko-secret
+      mountPath: /kaniko/.docker
+  volumes:
+  - name: kaniko-secret
+    secret:
+      secretName: dockerhub-credentials
+      items:
+      - key: .dockerconfigjson
+        path: config.json
 """
         }
     }
@@ -49,35 +62,27 @@ spec:
         // Skipping Maven Build in CI
         // stage('Build Maven Projects') { ... }
         
-        stage('Deploy to Kubernetes') {
+        stage('Build & Deploy Microservices') {
             steps {
                 script {
-                    echo 'Installing kubectl...'
-                    // Download kubectl binary specific to our environment (Linux AMD64)
-                    sh 'curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"'
-                    sh 'chmod +x kubectl'
-                    
-                    echo 'Deploying changes...'
-                    
-                    // Apply common resources explicitly to microservices namespace where applicable
-                    sh './kubectl apply -f kubernetes/namespace.yaml'
-                    // ConfigMaps and Secrets should be in microservices namespace
-                    sh './kubectl apply -f kubernetes/configmaps/ -n microservices'
-                    sh './kubectl apply -f kubernetes/secrets/db-secrets.yaml -n microservices || true'
-                    
-                    // Deploy Infrastructure and Services
-                    sh './kubectl apply -f kubernetes/infrastructure/ -n microservices || true'
-                    sh './kubectl apply -f kubernetes/services/ -n microservices || true'
-                    
                     def services = env.SERVICES.split(' ')
                     for (def service : services) {
-                        def yamlFile = "kubernetes/deployments/${service}.yaml"
-                        // Apply to microservices namespace explicitly
-                        sh "./kubectl apply -f ${yamlFile} -n microservices"
+                        stage("Service: ${service}") {
+                            container('maven') {
+                                echo "Building ${service}..."
+                                sh "mvn clean package -pl ${service} -am -DskipTests"
+                            }
+                            
+                            container('kaniko') {
+                                echo "Building and Pushing Docker image for ${service}..."
+                                sh "/kaniko/executor --context `pwd` --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest"
+                            }
+                            
+                            echo "Deploying ${service}..."
+                            sh "kubectl apply -f kubernetes/deployments/${service}.yaml -n microservices"
+                            sh "kubectl rollout restart deployment/${service} -n microservices"
+                        }
                     }
-                    
-                    echo 'Waiting for rollout...'
-                    sh './kubectl wait --for=condition=available deployment --all -n microservices --timeout=300s || true'
                 }
             }
         }
