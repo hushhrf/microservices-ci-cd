@@ -70,7 +70,7 @@ spec:
                         stage("Service: ${service}") {
                             container('maven') {
                                 echo "Building ${service}..."
-                                sh "mvn clean package -pl ${service} -am -DskipTests"
+                                sh "cd ${service} && mvn clean package -DskipTests"
                             }
                             
                             container('kaniko') {
