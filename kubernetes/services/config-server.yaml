@@ -4,7 +4,7 @@ metadata:
   name: config-server
   namespace: microservices
 spec:
-  type: LoadBalancer
+  type: NodePort
   ports:
     - port: 8888
       targetPort: 8888

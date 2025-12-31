@@ -58,6 +58,10 @@ spec:
                     sh './kubectl apply -f kubernetes/configmaps/ -n microservices'
                     sh './kubectl apply -f kubernetes/secrets/db-secrets.yaml -n microservices || true'
                     
+                    // Deploy Infrastructure and Services
+                    sh './kubectl apply -f kubernetes/infrastructure/ -n microservices || true'
+                    sh './kubectl apply -f kubernetes/services/ -n microservices || true'
+                    
                     def services = env.SERVICES.split(' ')
                     for (def service : services) {
                         def yamlFile = "kubernetes/deployments/${service}.yaml"

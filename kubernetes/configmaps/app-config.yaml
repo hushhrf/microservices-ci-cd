@@ -5,7 +5,7 @@ metadata:
   namespace: microservices
 data:
   # Database Configuration
-  DB_HOST: "microservices-cluster-postgres.clqeyqggc5da.us-east-1.rds.amazonaws.com"
+  DB_HOST: "postgres-service"
   DB_PORT: "5432"
   DB_NAME: "microservice"
   
@@ -49,3 +49,6 @@ data:
   SPRING_CLOUD_CONFIG_RETRY_INITIALINTERVAL: "2000"
   SPRING_CLOUD_CONFIG_RETRY_MAXINTERVAL: "10000"
   SPRING_CLOUD_CONFIG_RETRY_MAXATTEMPTS: "10"
+  
+  # JVM Memory Management (Survival Mode)
+  JAVA_TOOL_OPTIONS: "-Xmx128M -Xms64M"

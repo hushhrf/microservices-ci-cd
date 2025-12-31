@@ -25,26 +25,37 @@ spec:
               name: http
             - containerPort: 50000
               name: agent
+          env:
+            - name: JENKINS_OPTS
+              value: "--prefix=/jenkins"
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xmx256M -Xms128M"
           volumeMounts:
             - name: jenkins-home
               mountPath: /var/jenkins_home
           livenessProbe:
             httpGet:
-              path: /login
+              path: /jenkins/login
               port: 8080
-            initialDelaySeconds: 90
+            initialDelaySeconds: 240
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /login
+              path: /jenkins/login
               port: 8080
             initialDelaySeconds: 60
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
       volumes:
         - name: jenkins-home
-          persistentVolumeClaim:
-            claimName: jenkins-pvc
+          emptyDir: {}

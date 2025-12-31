@@ -21,7 +21,7 @@ metadata:
   name: grafana
   namespace: microservices
 spec:
-  type: LoadBalancer  # Use LoadBalancer for external access, or ClusterIP with Ingress
+  type: NodePort  # Use LoadBalancer for external access, or ClusterIP with Ingress
   ports:
     - port: 3000
       targetPort: 3000
