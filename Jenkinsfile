@@ -12,6 +12,7 @@ spec:
   containers:
   - name: jnlp
     image: jenkins/inbound-agent:latest
+    workingDir: /home/jenkins/agent
     volumeMounts:
     - name: workspace
       mountPath: /home/jenkins/agent
@@ -20,14 +21,20 @@ spec:
     command:
     - cat
     tty: true
+    workingDir: /home/jenkins/agent
     volumeMounts:
     - name: workspace
       mountPath: /home/jenkins/agent
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
-    - /busybox/cat
-    tty: true
+    - /busybox/sleep
+    args:
+    - "999999"
+    workingDir: /home/jenkins/agent
+    env:
+    - name: PATH
+      value: /busybox:/kaniko:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
     volumeMounts:
     - name: kaniko-secret
       mountPath: /kaniko/.docker
@@ -38,6 +45,7 @@ spec:
     command:
     - cat
     tty: true
+    workingDir: /home/jenkins/agent
     volumeMounts:
     - name: workspace
       mountPath: /home/jenkins/agent
