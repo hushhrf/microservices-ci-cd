@@ -12,24 +12,35 @@ spec:
   containers:
   - name: jnlp
     image: jenkins/inbound-agent:latest
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   - name: maven
     image: maven:3.8.6-openjdk-18
     command:
     - cat
     tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
-    - cat
+    - /busybox/cat
     tty: true
     volumeMounts:
     - name: kaniko-secret
       mountPath: /kaniko/.docker
+    - name: workspace
+      mountPath: /home/jenkins/agent
   - name: kubectl
     image: alpine/k8s:1.29.2
     command:
     - cat
     tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   volumes:
   - name: kaniko-secret
     secret:
@@ -37,6 +48,8 @@ spec:
       items:
       - key: .dockerconfigjson
         path: config.json
+  - name: workspace
+    emptyDir: {}
 """
         }
     }
