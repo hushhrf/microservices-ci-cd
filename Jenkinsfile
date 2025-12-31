@@ -35,7 +35,7 @@ spec:
     - name: workspace
       mountPath: /home/jenkins/agent
   - name: kubectl
-    image: bitnami/kubectl:latest
+    image: alpine/k8s:1.29.2
     command:
     - cat
     tty: true
