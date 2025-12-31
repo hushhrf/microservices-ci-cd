@@ -12,11 +12,17 @@ spec:
   containers:
   - name: jnlp
     image: jenkins/inbound-agent:latest
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   - name: maven
     image: maven:3.8.6-openjdk-18
     command:
     - cat
     tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command:
@@ -33,6 +39,9 @@ spec:
     command:
     - cat
     tty: true
+    volumeMounts:
+    - name: workspace
+      mountPath: /home/jenkins/agent
   volumes:
   - name: kaniko-secret
     secret:
