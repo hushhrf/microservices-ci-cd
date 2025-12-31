@@ -75,7 +75,7 @@ spec:
                             
                             container('kaniko') {
                                 echo "Building and Pushing Docker image for ${service}..."
-                                sh "/kaniko/executor --context `pwd` --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest"
+                                sh "/kaniko/executor --context ./${service} --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest"
                             }
                             
                             echo "Deploying ${service}..."
