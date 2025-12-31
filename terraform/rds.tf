@@ -1,5 +1,6 @@
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
+  count      = var.enable_rds ? 1 : 0
   name       = "${var.cluster_name}-db-subnet-group"
   subnet_ids = aws_subnet.private[*].id
 
@@ -13,6 +14,7 @@ resource "aws_db_subnet_group" "main" {
 
 # RDS Parameter Group (Optional - for PostgreSQL tuning)
 resource "aws_db_parameter_group" "main" {
+  count  = var.enable_rds ? 1 : 0
   name   = "${var.cluster_name}-postgres-params"
   family = "postgres15"
 
@@ -31,32 +33,29 @@ resource "aws_db_parameter_group" "main" {
 
 # RDS Instance
 resource "aws_db_instance" "main" {
+  count                  = var.enable_rds ? 1 : 0
   identifier             = "${var.cluster_name}-postgres"
   engine                 = "postgres"
   engine_version         = "15.10"
-  instance_class         = var.db_instance_class
-  allocated_storage      = var.db_allocated_storage
-  max_allocated_storage  = 100  # Enable storage autoscaling
-  storage_type           = "gp3"
-  storage_encrypted       = true
+  instance_class         = "db.t3.micro"
+  allocated_storage      = 20
+  storage_type           = "gp2"
+  storage_encrypted       = false
 
   db_name  = var.db_name
   username = var.db_username
   password = var.db_password
 
-  db_subnet_group_name   = aws_db_subnet_group.main.name
+  db_subnet_group_name   = aws_db_subnet_group.main[0].name
   vpc_security_group_ids = [aws_security_group.rds.id]
-  parameter_group_name   = aws_db_parameter_group.main.name
+  parameter_group_name   = aws_db_parameter_group.main[0].name
 
-  backup_retention_period = 7
-  backup_window           = "03:00-04:00"
-  maintenance_window      = "mon:04:00-mon:05:00"
+  multi_az                = false
+  backup_retention_period = 0
+  skip_final_snapshot      = true
 
-  skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.cluster_name}-final-snapshot-${formatdate("YYYY-MM-DD-hhmm", timestamp())}"
-
-  enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]
-  performance_insights_enabled    = false  # Disable to save costs
+  enabled_cloudwatch_logs_exports = []
+  performance_insights_enabled    = false
 
   tags = merge(
     var.tags,

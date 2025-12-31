@@ -8,12 +8,8 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
-      external_labels:
-        cluster: 'microservices-cluster'
-        environment: 'production'
 
     scrape_configs:
-      # Kubernetes API Server
       - job_name: 'kubernetes-apiservers'
         kubernetes_sd_configs:
         - role: endpoints
@@ -26,7 +22,6 @@ data:
           action: keep
           regex: default;kubernetes;https
 
-      # Kubernetes Nodes
       - job_name: 'kubernetes-nodes'
         kubernetes_sd_configs:
         - role: node
@@ -38,33 +33,6 @@ data:
         - action: labelmap
           regex: __meta_kubernetes_node_label_(.+)
 
-      # Kubernetes Pods
-      - job_name: 'kubernetes-pods'
-        kubernetes_sd_configs:
-        - role: pod
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
-          action: keep
-          regex: true
-        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
-          action: replace
-          target_label: __metrics_path__
-          regex: (.+)
-        - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
-          action: replace
-          regex: ([^:]+)(?::\d+)?;(\d+)
-          replacement: $1:$2
-          target_label: __address__
-        - action: labelmap
-          regex: __meta_kubernetes_pod_label_(.+)
-        - source_labels: [__meta_kubernetes_namespace]
-          action: replace
-          target_label: kubernetes_namespace
-        - source_labels: [__meta_kubernetes_pod_name]
-          action: replace
-          target_label: kubernetes_pod_name
-
-      # Spring Boot Services (via Actuator)
       - job_name: 'spring-boot-services'
         kubernetes_sd_configs:
         - role: pod
@@ -79,37 +47,6 @@ data:
         - source_labels: [__meta_kubernetes_pod_label_app]
           action: replace
           target_label: service
-        - source_labels: [__meta_kubernetes_pod_name]
-          action: replace
-          target_label: pod
-        metrics_path: /actuator/prometheus
-
-      # Config Server
-      - job_name: 'config-server'
-        kubernetes_sd_configs:
-        - role: pod
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_pod_label_app]
-          action: keep
-          regex: config-server
-        - source_labels: [__meta_kubernetes_pod_ip]
-          action: replace
-          target_label: __address__
-          replacement: $1:8888
-        metrics_path: /actuator/prometheus
-
-      # Eureka Server
-      - job_name: 'eureka-server'
-        kubernetes_sd_configs:
-        - role: pod
-        relabel_configs:
-        - source_labels: [__meta_kubernetes_pod_label_app]
-          action: keep
-          regex: eureka-server
-        - source_labels: [__meta_kubernetes_pod_ip]
-          action: replace
-          target_label: __address__
-          replacement: $1:8761
         metrics_path: /actuator/prometheus
 
 ---
@@ -146,15 +83,16 @@ spec:
       serviceAccountName: prometheus
       containers:
       - name: prometheus
-        image: prom/prometheus:latest
-        ports:
-        - containerPort: 9090
+        image: prom/prometheus:v2.45.0
         args:
           - '--config.file=/etc/prometheus/prometheus.yml'
           - '--storage.tsdb.path=/prometheus'
-          - '--storage.tsdb.retention.time=30d'
+          - '--storage.tsdb.retention.time=2h'
+          - '--storage.tsdb.wal-compression'
           - '--web.console.libraries=/usr/share/prometheus/console_libraries'
           - '--web.console.templates=/usr/share/prometheus/consoles'
+        ports:
+        - containerPort: 9090
         volumeMounts:
         - name: prometheus-config
           mountPath: /etc/prometheus
@@ -162,42 +100,27 @@ spec:
           mountPath: /prometheus
         resources:
           requests:
-            memory: "512Mi"
-            cpu: "500m"
+            cpu: "100m"
+            memory: "128Mi"
           limits:
-            memory: "2Gi"
-            cpu: "2000m"
+            cpu: "250m"
+            memory: "256Mi"
         livenessProbe:
           httpGet:
             path: /-/healthy
             port: 9090
           initialDelaySeconds: 30
-          periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /-/ready
             port: 9090
-          initialDelaySeconds: 5
-          periodSeconds: 5
       volumes:
       - name: prometheus-config
         configMap:
           name: prometheus-config
       - name: prometheus-storage
-        persistentVolumeClaim:
-          claimName: prometheus-pvc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: prometheus-pvc
-  namespace: microservices
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
+        emptyDir: {}
+
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -211,17 +134,7 @@ metadata:
   name: prometheus
 rules:
 - apiGroups: [""]
-  resources:
-  - nodes
-  - nodes/proxy
-  - services
-  - endpoints
-  - pods
-  verbs: ["get", "list", "watch"]
-- apiGroups:
-  - extensions
-  resources:
-  - ingresses
+  resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
   verbs: ["get", "list", "watch"]
 - nonResourceURLs: ["/metrics"]
   verbs: ["get"]
@@ -238,4 +151,3 @@ subjects:
 - kind: ServiceAccount
   name: prometheus
   namespace: microservices
-

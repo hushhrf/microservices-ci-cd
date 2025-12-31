@@ -52,3 +52,8 @@ data:
   
   # JVM Memory Management (Survival Mode)
   JAVA_TOOL_OPTIONS: "-Xmx128M -Xms64M"
+
+  # Actuator & Prometheus Configuration
+  MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: "*"
+  MANAGEMENT_ENDPOINT_HEALTH_SHOW_DETAILS: "always"
+  MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: "true"

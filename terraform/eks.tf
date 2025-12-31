@@ -1,29 +1,16 @@
-# EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
   role_arn = data.aws_iam_role.lab_role.arn
-  version  = var.cluster_version
+  version  = "1.29"
 
   vpc_config {
-    subnet_ids              = concat(aws_subnet.public[*].id, aws_subnet.private[*].id)
+    subnet_ids              = aws_subnet.public[*].id
     security_group_ids      = [aws_security_group.eks_cluster.id]
     endpoint_private_access = true
     endpoint_public_access  = true
   }
 
-  enabled_cluster_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
-
-  depends_on = [
-    aws_cloudwatch_log_group.eks_cluster,
-  ]
-
-  tags = var.tags
-}
-
-# CloudWatch Log Group for EKS
-resource "aws_cloudwatch_log_group" "eks_cluster" {
-  name              = "/aws/eks/${var.cluster_name}/cluster"
-  retention_in_days = 7
+  enabled_cluster_log_types = []
 
   tags = var.tags
 }
@@ -33,7 +20,8 @@ resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-node-group"
   node_role_arn   = data.aws_iam_role.lab_role.arn
-  subnet_ids      = aws_subnet.private[*].id
+  # Using only the first public subnet to keep nodes in a single AZ for cost efficiency
+  subnet_ids      = [aws_subnet.public[0].id]
   instance_types  = [var.node_instance_type]
 
   scaling_config {
@@ -74,7 +62,7 @@ resource "aws_eks_node_group" "main" {
 # }
 
 
-resource "aws_eks_addon" "ebs_csi_driver" {
-  cluster_name = aws_eks_cluster.main.name
-  addon_name   = "aws-ebs-csi-driver"
-}
+# resource "aws_eks_addon" "ebs_csi_driver" {
+#   cluster_name = aws_eks_cluster.main.name
+#   addon_name   = "aws-ebs-csi-driver"
+# }

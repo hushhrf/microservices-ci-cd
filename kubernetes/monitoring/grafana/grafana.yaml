@@ -12,7 +12,6 @@ data:
       access: proxy
       url: http://prometheus:9090
       isDefault: true
-      editable: true
 
 ---
 apiVersion: v1
@@ -21,10 +20,11 @@ metadata:
   name: grafana
   namespace: microservices
 spec:
-  type: NodePort  # Use LoadBalancer for external access, or ClusterIP with Ingress
+  type: NodePort
   ports:
     - port: 3000
       targetPort: 3000
+      nodePort: 32000
       protocol: TCP
   selector:
     app: grafana
@@ -54,50 +54,22 @@ spec:
         - name: GF_SECURITY_ADMIN_USER
           value: "admin"
         - name: GF_SECURITY_ADMIN_PASSWORD
-          value: "admin"  # CHANGE THIS IN PRODUCTION!
-        - name: GF_SERVER_ROOT_URL
-          value: "%(protocol)s://%(domain)s:%(http_port)s/"
+          value: "admin"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/lib/grafana
         - name: grafana-datasources
           mountPath: /etc/grafana/provisioning/datasources
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "250m"
-          limits:
-            memory: "512Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 60
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /api/health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 5
       volumes:
       - name: grafana-storage
-        persistentVolumeClaim:
-          claimName: grafana-pvc
+        emptyDir: {}
       - name: grafana-datasources
         configMap:
           name: grafana-datasources
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: grafana-pvc
-  namespace: microservices
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 10Gi
-

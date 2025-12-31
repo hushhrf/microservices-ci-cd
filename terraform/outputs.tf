@@ -24,13 +24,13 @@ output "cluster_security_group_id" {
 }
 
 output "rds_endpoint" {
-  description = "RDS instance endpoint"
-  value       = aws_db_instance.main.endpoint
+  description = "RDS instance endpoint (if enabled)"
+  value       = length(aws_db_instance.main) > 0 ? aws_db_instance.main[0].endpoint : null
 }
 
 output "rds_address" {
-  description = "RDS instance address"
-  value       = aws_db_instance.main.address
+  description = "RDS instance address (if enabled)"
+  value       = length(aws_db_instance.main) > 0 ? aws_db_instance.main[0].address : null
 }
 
 output "configure_kubectl" {
