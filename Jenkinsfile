@@ -15,10 +15,10 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "32Mi"
+        memory: "128Mi"
         cpu: "50m"
       limits:
-        memory: "64Mi"
+        memory: "256Mi"
         cpu: "100m"
     volumeMounts:
     - name: workspace
@@ -34,7 +34,7 @@ spec:
         memory: "256Mi"
         cpu: "300m"
       limits:
-        memory: "384Mi"
+        memory: "512Mi"
         cpu: "500m"
     volumeMounts:
     - name: workspace
@@ -48,11 +48,11 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "128Mi"
+        memory: "64Mi"
         cpu: "100m"
       limits:
-        memory: "256Mi"
-        cpu: "300m"
+        memory: "128Mi"
+        cpu: "200m"
     env:
     - name: PATH
       value: /busybox:/kaniko:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
