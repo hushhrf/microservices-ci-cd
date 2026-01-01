@@ -48,11 +48,11 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "64Mi"
+        memory: "256Mi"
         cpu: "100m"
       limits:
-        memory: "128Mi"
-        cpu: "200m"
+        memory: "512Mi"
+        cpu: "300m"
     env:
     - name: PATH
       value: /busybox:/kaniko:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
