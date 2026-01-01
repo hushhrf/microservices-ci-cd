@@ -2,7 +2,7 @@
 resource "aws_db_subnet_group" "main" {
   count      = var.enable_rds ? 1 : 0
   name       = "${var.cluster_name}-db-subnet-group"
-  subnet_ids = aws_subnet.private[*].id
+  subnet_ids = local.subnet_ids
 
   tags = merge(
     var.tags,
@@ -47,7 +47,6 @@ resource "aws_db_instance" "main" {
   password = var.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.main[0].name
-  vpc_security_group_ids = [aws_security_group.rds.id]
   parameter_group_name   = aws_db_parameter_group.main[0].name
 
   multi_az                = false

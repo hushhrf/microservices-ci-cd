@@ -24,7 +24,7 @@ spec:
             name: app-config
         env:
         - name: JAVA_TOOL_OPTIONS
-          value: "-Xmx192M -Xms64M"
+          value: "-Xmx192M -Xms64M -Dserver.port=8888"
         resources:
           requests:
             memory: "64Mi"

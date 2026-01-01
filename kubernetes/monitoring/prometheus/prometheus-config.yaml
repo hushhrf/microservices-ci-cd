@@ -56,10 +56,11 @@ metadata:
   name: prometheus
   namespace: microservices
 spec:
-  type: ClusterIP
+  type: NodePort
   ports:
     - port: 9090
       targetPort: 9090
+      nodePort: 30090
       protocol: TCP
   selector:
     app: prometheus

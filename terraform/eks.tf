@@ -1,11 +1,10 @@
 resource "aws_eks_cluster" "main" {
   name     = var.cluster_name
-  role_arn = data.aws_iam_role.lab_role.arn
+  role_arn = local.lab_role_arn
   version  = "1.29"
 
   vpc_config {
-    subnet_ids              = aws_subnet.public[*].id
-    security_group_ids      = [aws_security_group.eks_cluster.id]
+    subnet_ids              = local.subnet_ids
     endpoint_private_access = true
     endpoint_public_access  = true
   }
@@ -19,9 +18,9 @@ resource "aws_eks_cluster" "main" {
 resource "aws_eks_node_group" "main" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "${var.cluster_name}-node-group"
-  node_role_arn   = data.aws_iam_role.lab_role.arn
-  # Using only the first public subnet to keep nodes in a single AZ for cost efficiency
-  subnet_ids      = [aws_subnet.public[0].id]
+  node_role_arn   = local.lab_role_arn
+  # Using first two default subnets for redundancy
+  subnet_ids      = slice(local.subnet_ids, 0, min(2, length(local.subnet_ids)))
   instance_types  = [var.node_instance_type]
 
   scaling_config {

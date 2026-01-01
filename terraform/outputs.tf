@@ -1,6 +1,6 @@
 output "vpc_id" {
   description = "ID of the VPC"
-  value       = aws_vpc.main.id
+  value       = local.vpc_id
 }
 
 output "cluster_id" {
@@ -18,10 +18,10 @@ output "cluster_endpoint" {
   value       = aws_eks_cluster.main.endpoint
 }
 
-output "cluster_security_group_id" {
-  description = "Security group ID attached to the EKS cluster"
-  value       = aws_security_group.eks_cluster.id
-}
+# output "cluster_security_group_id" {
+#   description = "Security group ID attached to the EKS cluster"
+#   value       = aws_security_group.eks_cluster.id
+# }
 
 output "rds_endpoint" {
   description = "RDS instance endpoint (if enabled)"
@@ -40,11 +40,11 @@ output "configure_kubectl" {
 
 output "public_subnet_ids" {
   description = "Public subnet IDs"
-  value       = aws_subnet.public[*].id
+  value       = local.subnet_ids
 }
 
 output "private_subnet_ids" {
   description = "Private subnet IDs"
-  value       = aws_subnet.private[*].id
+  value       = []  # Using default VPC - no private subnets created
 }
 

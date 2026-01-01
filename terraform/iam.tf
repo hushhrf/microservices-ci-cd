@@ -18,9 +18,9 @@
 #   tags = var.tags
 # }
 
-# Data source for existing LabRole
-data "aws_iam_role" "lab_role" {
-  name = "LabRole"
+# Use hardcoded LabRole ARN to avoid IAM GetRole permission issues in AWS Academy
+locals {
+  lab_role_arn = "arn:aws:iam::905418385450:role/LabRole"
 }
 
 # Attach AWS managed policy for EKS Cluster

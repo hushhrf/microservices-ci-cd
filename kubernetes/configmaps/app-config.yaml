@@ -23,6 +23,8 @@ data:
   
   # Config Server
   CONFIG_SERVER_URL: "http://config-server:8888"
+  SPRING_CLOUD_CONFIG_SERVER_GIT_URI: "https://github.com/hushhrf/microservices-ci-cd.git"
+  SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS: "config"
   
   # Spring Profiles
   SPRING_PROFILES_ACTIVE: "kubernetes"
