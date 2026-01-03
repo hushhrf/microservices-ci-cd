@@ -33,6 +33,12 @@ spec:
             secretKeyRef:
               name: db-secrets
               key: DB_PASSWORD
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server:8761/eureka"
+        - name: SPRING_APPLICATION_JSON
+          value: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://eureka-server:8761/eureka"}}}}'
+        - name: SPRING_APPLICATION_NAME
+          value: "job-service"
         livenessProbe:
           tcpSocket:
             port: 8080

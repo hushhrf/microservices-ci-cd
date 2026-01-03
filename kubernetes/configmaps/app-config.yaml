@@ -8,6 +8,7 @@ data:
   DB_HOST: "postgres-service"
   DB_PORT: "5432"
   DB_NAME: "microservice"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres-service:5432/microservice"
   
   # Redis Configuration
   REDIS_HOST: "redis-service"
@@ -17,12 +18,19 @@ data:
   KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
   KAFKA_TOPIC_NAME: "notification-events"
   KAFKA_CONSUMER_GROUP_ID: "notification-group"
+  SPRING_KAFKA_TOPIC_NAME: "job-topic"
+  SPRING_KAFKA_CONSUMER_GROUP_ID: "notification-group"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
   
-  # Eureka Configuration
+  # Eureka Configuration (Spring Boot relaxed binding)
   EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
+  EUREKA_CLIENT_SERVICE_URL_DEFAULT_ZONE: "http://eureka-server:8761/eureka"
+  # Override Config Server values
+  SPRING_CLOUD_EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://eureka-server:8761/eureka"
   
   # Config Server
   CONFIG_SERVER_URL: "http://config-server:8888"
+  SPRING_CONFIG_IMPORT: "optional:configserver:http://config-server:8888/"
   SPRING_CLOUD_CONFIG_SERVER_GIT_URI: "https://github.com/hushhrf/microservices-ci-cd.git"
   SPRING_CLOUD_CONFIG_SERVER_GIT_SEARCH_PATHS: "config"
   

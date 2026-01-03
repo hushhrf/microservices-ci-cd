@@ -22,6 +22,15 @@ spec:
         envFrom:
         - configMapRef:
             name: app-config
+        env:
+        - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+          value: "http://eureka-server:8761/eureka"
+        - name: SPRING_APPLICATION_JSON
+          value: '{"eureka":{"client":{"serviceUrl":{"defaultZone":"http://eureka-server:8761/eureka"}}}}'
+        - name: SPRING_APPLICATION_NAME
+          value: "api-gateway"
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xms64m -Xmx192m"
         readinessProbe:
           tcpSocket:
             port: 8080
@@ -29,7 +38,7 @@ spec:
           periodSeconds: 5
         resources:
           requests:
-            memory: "64Mi"
+            memory: "128Mi"
             cpu: "50m"
           limits:
             memory: "256Mi"
