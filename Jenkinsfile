@@ -51,10 +51,10 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "64Mi"
+        memory: "256Mi"
         cpu: "100m"
       limits:
-        memory: "128Mi"
+        memory: "512Mi"
         cpu: "200m"
     env:
     - name: PATH
@@ -131,7 +131,7 @@ spec:
                             
                             container('kaniko') {
                                 echo "Building and Pushing Docker image for ${service}..."
-                                sh "/kaniko/executor --context ./${service} --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest"
+                                sh "/kaniko/executor --context ./${service} --dockerfile ./${service}/Dockerfile --destination ${DOCKERHUB_REPO}/${service}:latest --single-snapshot --use-new-run --compressed-caching=false"
                             }
                             
                             container('kubectl') {
