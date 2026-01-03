@@ -15,10 +15,10 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "128Mi"
+        memory: "64Mi"
         cpu: "50m"
       limits:
-        memory: "256Mi"
+        memory: "128Mi"
         cpu: "100m"
     volumeMounts:
     - name: workspace
@@ -31,11 +31,14 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "256Mi"
-        cpu: "300m"
+        memory: "128Mi"
+        cpu: "200m"
       limits:
-        memory: "512Mi"
-        cpu: "500m"
+        memory: "384Mi"
+        cpu: "400m"
+    env:
+    - name: MAVEN_OPTS
+      value: "-Xmx256m -Xms128m"
     volumeMounts:
     - name: workspace
       mountPath: /home/jenkins/agent
@@ -48,11 +51,11 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "256Mi"
+        memory: "128Mi"
         cpu: "100m"
       limits:
-        memory: "512Mi"
-        cpu: "300m"
+        memory: "256Mi"
+        cpu: "200m"
     env:
     - name: PATH
       value: /busybox:/kaniko:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
