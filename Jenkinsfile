@@ -31,14 +31,14 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "128Mi"
-        cpu: "200m"
+        memory: "64Mi"
+        cpu: "100m"
       limits:
-        memory: "384Mi"
-        cpu: "400m"
+        memory: "192Mi"
+        cpu: "300m"
     env:
     - name: MAVEN_OPTS
-      value: "-Xmx256m -Xms128m"
+      value: "-Xmx128m -Xms64m"
     volumeMounts:
     - name: workspace
       mountPath: /home/jenkins/agent
@@ -51,10 +51,10 @@ spec:
     workingDir: /home/jenkins/agent
     resources:
       requests:
-        memory: "128Mi"
+        memory: "64Mi"
         cpu: "100m"
       limits:
-        memory: "256Mi"
+        memory: "128Mi"
         cpu: "200m"
     env:
     - name: PATH
