@@ -4,7 +4,7 @@ metadata:
   name: gateway
   namespace: microservices
 spec:
-  type: NodePort  # Use LoadBalancer for AWS ELB, or ClusterIP with Ingress
+  type: LoadBalancer
   ports:
     - port: 8080
       targetPort: 8080
