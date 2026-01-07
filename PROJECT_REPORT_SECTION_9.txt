@@ -1,0 +1,46 @@
+# 9. Monitoring with Prometheus and Grafana
+
+## 9.1 Why Monitoring
+
+Monitoring and observability are the "eyes" of a distributed system. Without them, identifying the root cause of failures in a cluster of 20+ containers would be impossible.
+
+### 🔍 Observability
+We implemented a full monitoring stack to gain deep insights into the internal state of our microservices. It allows us to see not just *if* a service is up, but *how* it is performing (e.g., JVM heap usage, HTTP request latency).
+
+### 📈 Performance Tracking
+By collecting time-series data, we can track the impact of new code deployments on CPU and Memory usage. This was vital in our project to ensure that the "Jenkins builds" didn't push our `t3.small` nodes past their resource limits.
+
+### 🚨 Failure Detection
+Monitoring allows for proactive troubleshooting. Instead of waiting for a user to report a bug, Grafana displays real-time health statuses, allowing us to see `CrashLoopBackOff` or `OOMKilled` events the moment they occur.
+
+---
+
+## 9.2 Prometheus Configuration
+
+Prometheus was deployed as our primary metrics harvester. 
+
+### 📡 Metrics Collection (Scraping)
+Prometheus uses a "pull-based" model. Every 15 seconds, it "scrapes" (requests) data from specified targets.
+1.  **Kubernetes Infrastructure**: Prometheus was configured to scrape the Kubernetes API Server and Node-level metrics to track the overall health of the EKS cluster.
+2.  **Application Metrics**: Every Spring Boot microservice includes the **Micrometer Prometheus** registry. This exposes a specialized endpoint at `/actuator/prometheus`.
+3.  **Service Discovery**: Prometheus doesn't need a list of hardcoded IPs. It automatically discovers new pods in the `microservices` namespace using Kubernetes Service Discovery (SD).
+
+### 📉 Resource-Saving Configuration
+To fit on our limited nodes, Prometheus was configured with a **2-hour retention policy** and WAL (Write-Ahead-Log) compression. This minimized the disk and RAM footprint while still providing enough data for active debugging.
+
+---
+
+## 9.3 Grafana Dashboards
+
+Grafana acts as the visualization layer, turning the raw data from Prometheus into actionable insights.
+
+### 📊 Real-Time Visualization
+We configured custom dashboards to monitor the "Three Pillars" of our cluster:
+*   **Availability**: A "green/red" status board showing the up/down state for all 8 services.
+*   **CPU & Memory**: Live line graphs showing exactly how much RAM the Gateway or Auth service is consuming relative to its Kubernetes limits.
+*   **Pod Status**: A overview of pod restarts and resource throttles.
+
+### 🛠️ Usage During Debugging
+Grafana was instrumental during the **"Deployment Stabilization"** phase. When the `job-service` was crashing, Grafana's memory graphs revealed that the pod was exceeding its 256MB limit during Kafka initialization, allowing us to accurately adjust the Kubernetes YAML limits to 512MB for a permanent fix.
+
+---

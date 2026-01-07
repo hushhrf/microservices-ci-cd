@@ -1,0 +1,83 @@
+# 4. Containerization with Docker
+
+## 4.1 Why Containerization
+
+Docker was implemented as the core containerization engine to ensure the reliability and speed of our microservices deployment.
+
+### 🧩 Environment Consistency
+"It works on my machine" is no longer an issue. By packaging the Java runtime, dependencies, and application into a single image, we ensure the service behaves exactly the same on a developer's laptop, the Jenkins build agent, and the AWS EKS production nodes.
+
+### 🚢 Portability
+Because containers are platform-independent, we could easily move our services between local Docker Compose testing and the AWS cloud without changing a single line of application code.
+
+### ⚡ Faster Deployments
+Containers are immutable and lightweight. Instead of installing Java and dependencies on every server, we simply pull the pre-built image from Docker Hub. This allowed us to perform rolling updates in Kubernetes in seconds.
+
+---
+
+## 4.2 Dockerfile Structure
+
+We utilized a **single-stage, lightweight runtime strategy** to minimize image size and resource impact on our `t3.small` nodes.
+
+### Generic Dockerfile Template:
+1.  **Base Image**: `eclipse-temurin:17-jre-alpine`
+    *   *Rationale*: Alpine Linux is used to keep the final image size under 200MB, significantly faster to pull and less taxing on cluster storage.
+2.  **Working Directory**: `/app`
+3.  **Application Copy**: `COPY target/*.jar app.jar`
+    *   Copies the compiled Spring Boot artifact from the Maven build stage.
+4.  **Port Exposure**: `EXPOSE 8080` (or `8888`/`8761` for infra services).
+5.  **Entry Point**: `ENTRYPOINT ["java", "-Xmx128m", "-jar", "app.jar"]`
+    *   *Note*: Explicit memory limits (`-Xmx128m`) were added to the entry point to force JVM garbage collection and stay within the EKS node's RAM limits.
+
+---
+
+## 4.3 Dockerfiles per Service
+
+*   **Independent Versioning**: Each of the 8 microservices has its own unique Dockerfile in its root directory.
+*   **Decoupled Builds**: Jenkins builds each service independently. If only the "User Service" code changes, only that image is rebuilt and pushed.
+*   **Central Repository**: Every image is tagged and pushed to **Docker Hub** (e.g., `hushhrf/user-service:latest`), creating a reliable history of deployments.
+
+---
+
+# 5. AWS Account and Credentials Configuration
+
+## 5.1 AWS Lab Environment
+
+The project was deployed within a **restricted AWS Academy / Lab Learner** environment, which introduced unique operational and security challenges.
+
+### 🎓 AWS Academy Context
+We utilized the AWS Academy platform, which provides a sandbox environment for learning. Unlike a production AWS account, this environment is ephemeral and highly restricted to prevent cost overruns and security breaches.
+
+### ⏳ Temporary Credentials
+The lab environment utilizes **AWS STS (Security Token Service)** to issue temporary session tokens. 
+*   **Expiration**: Credentials typically expire every 4 hours.
+*   **Operational Impact**: This required a robust process to refresh the `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` across all tools (Terraform, kubectl, and Jenkins) to maintain the deployment pipeline.
+
+### 💰 Budget and Resource Limitations
+*   **Instance Restrictions**: The lab only permits smaller instance types (e.g., **t3.small** with 2 vCPUs and 2GB RAM).
+*   **Budget Ceiling**: A fixed monetary credit is applied to each learner. To stay under this limit, we implemented a "teardown" strategy using `terraform destroy` at the end of each session to stop all billing for EKS, EC2, and ELB resources.
+
+---
+
+## 5.2 AWS Credentials Management
+
+Security was a primary concern throughout the project, particularly regarding how different components accessed the AWS infrastructure.
+
+### 💻 Local Configuration
+On the developer machine, credentials were never hardcoded into the scripts. Instead, we utilized the standard **AWS CLI profile** approach:
+*   Credentials were saved in `~/.aws/credentials`.
+*   Terraform and `kubectl` automatically pulled the necessary session tokens from this file, ensuring that sensitive keys remained outside the Git repository.
+
+### 🔐 Secure Jenkins Access
+To allow Jenkins to deploy to the EKS cluster, we used the **Jenkins Credentials Provider**:
+*   **Secret Text**: AWS keys were stored as encrypted "Secret Text" within the Jenkins credential store.
+*   **Scoped Access**: Only the specific "Deployment Pipeline" was granted permission to use these credentials.
+*   **Runtime Injection**: During the build, Jenkins injected the keys into the environment variables of the build agent, where they were used by `kubectl` to authenticate with the EKS API.
+
+### 🛡️ Importance of Not Hardcoding Secrets
+We followed the "Security by Design" principle:
+*   **No Environment Variables in YAML**: Kubernetes manifests used `SecretKeyRef` to pull database passwords rather than storing them as plain text.
+*   **Git Integrity**: The `.gitignore` file was strictly configured to block `.env`, `.pem`, and `terraform.tfstate` files. 
+*   **Benefit**: This approach prevents "Credential Leakage," ensuring that even if the source code is compromised, the production environment and cloud account remain secure.
+
+---

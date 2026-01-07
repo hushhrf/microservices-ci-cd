@@ -1,0 +1,51 @@
+# 12. Project Challenges and Solutions
+
+Deploying a full microservices stack on a restricted cloud environment presented several real-world engineering challenges. Below are the key issues faced and the technical solutions implemented.
+
+---
+
+## 12.1 The "Forbidden" Availability Zone (us-east-1e)
+
+### 🔴 The Challenge
+During the initial infrastructure provisioning, Terraform consistently failed during the EKS cluster creation stage. The error indicated that the AWS Academy account lacked the required permissions or capacity in the `us-east-1e` availability zone to support the EKS control plane.
+
+### ✅ The Solution
+We performed a deep audit of the VPC subnets. We modified the `terraform/vpc.tf` file to explicitly hardcode a list of "safe" subnets (`us-east-1a` through `us-east-1d`) and **excluded `us-east-1e`** entirely. This ensured the control plane was only provisioned in zones with full EKS support, resulting in a stable cluster creation.
+
+---
+
+## 12.2 Memory Saturation & Pod Evictions
+
+### 🔴 The Challenge
+The `t3.small` nodes (2GB RAM) quickly reached saturation when running Jenkins and the first 3 microservices simultaneously. This caused **Pod Evictions**, where Kubernetes would forcibly kill the Jenkins master pod to prevent the entire node from crashing.
+
+### ✅ The Solution
+*   **The Swap Strategy**: We implemented a "context-switching" workflow. Once Jenkins successfully built and pushed the images, we scaled the Jenkins deployment to 0. This reclaimed nearly 50% of the node's RAM, providing a "resource buffer" for the application pods to start.
+*   **Persistent Storage**: We ensured Jenkins was configured with a Persistent Volume Claim (PVC) so that scaling it to 0 did not lose our build history or credentials.
+
+---
+
+## 12.3 JVM Memory Management vs. Kubernetes Limits
+
+### 🔴 The Challenge
+Several services, particularly the **Job Service** and **Notification Service**, were entering `CrashLoopBackOff` status. The logs revealed `java.lang.OutOfMemoryError` even though the Kubernetes memory limit was set to 256Mi.
+
+### ✅ The Solution
+We discovered that the JVM's "Max Heap" was taking up too much room, leaving no space for the operating system or Kafka client buffers inside the container.
+*   **Resource Tuning**: We updated the Dockerfile `ENTRYPOINT` to include explicit JVM flags: `-Xmx128m -Xms64m`. 
+*   **K8s Alignment**: We increased the Kubernetes `limits` to 384Mi or 512Mi for critical services while keeping the JVM heap small. This "Headroom" allowed the services to handle spikes in Kafka messaging without being terminated by the Kubernetes OOM-Killer.
+
+---
+
+## 12.4 Jenkins Build Failures (Kaniko OOM)
+
+### 🔴 The Challenge
+The CI/CD pipeline was failing during the `snapshot` stage of the Docker build. The Kaniko pod would use over 1GB of RAM trying to pack the Spring Boot JAR, causing the build agent to crash.
+
+### ✅ The Solution
+We implemented advanced Kaniko flags in the `Jenkinsfile` to reduce the memory footprint:
+*   `--snapshotMode=redo`: This flag tells Kaniko to only calculate the filesystem difference rather than storing full snapshots in RAM.
+*   `--use-new-run`: Optimized the layer processing.
+*   **Result**: Build memory usage dropped from 1GB+ to under 400MB, allowing successful builds on our small worker nodes.
+
+---

@@ -1,0 +1,76 @@
+# 2. Global Architecture Overview
+
+## 2.1 High-Level System Architecture
+
+The project implements a highly scalable and observable microservices architecture deployed on **Amazon Web Services (AWS)** using a managed container orchestration strategy.
+
+### Cloud & Orchestration
+*   **AWS (Cloud Provider)**: Provides the global infrastructure. We utilized **Amazon EKS (Elastic Kubernetes Service)** as the control plane to manage the lifecycle of our containers.
+*   **Managed Nodes**: The cluster runs on **EC2 t3.small** instances. Due to the limited RAM (2GB per node), the system was designed in "Budget-Survival Mode," utilizing aggressive resource limits and staggered deployments.
+
+### CI/CD Pipeline
+*   **Jenkins**: Orchestrates the entire delivery lifecycle. Jenkins is deployed within the cluster and manages:
+    *   **Source Control**: Pulling code from GitHub.
+    *   **Build Engine**: Utilizing **Kaniko** to build Docker images without requiring a Docker daemon (Docker-in-Docker), which is more secure and resource-efficient in Kubernetes.
+    *   **Registry**: Pushing verified images to **Docker Hub**.
+    *   **Automated Deployment**: Rolling out updates to the microservices namespace.
+
+### Monitoring & Logging
+*   **Prometheus**: Acts as the central time-series database, scraping metrics from Spring Boot Actuator endpoints (`/actuator/prometheus`).
+*   **Grafana**: Provides a visual dashboard for real-time monitoring of CPU, RAM, and Pod availability.
+*   **AWS CloudWatch**: Integrated via a **CloudWatch Agent DaemonSet**. It streams container logs directly to AWS CloudWatch Logs, ensuring log persistence even if pods are recycled.
+
+### Architecture Interaction (Mermaid Diagram)
+```mermaid
+graph TD
+    User((User)) --> Gateway[API Gateway]
+    
+    subgraph "AWS EKS Cluster"
+        subgraph "CI/CD"
+            Jenkins[Jenkins] --> Kaniko[Kaniko Build Pod]
+            Kaniko --> DockerHub((Docker Hub))
+        end
+        
+        subgraph "Microservices"
+            Gateway -->|Route| Auth[Auth Service]
+            Gateway -->|Route| UserSvc[User Service]
+            Auth --> PSQL[(Postgres)]
+            UserSvc --> Redis[(Redis)]
+            Services --> Kafka{Kafka}
+        end
+        
+        subgraph "Observability"
+            Prom[(Prometheus)] -.->|Scrape| Services
+            Grafana[Grafana] -->|Query| Prom
+            CW[CloudWatch Agent] -->|Stream Logs| AWS_CW[AWS CloudWatch Logs]
+        end
+    end
+    
+    GitHub((GitHub)) -->|Trigger| Jenkins
+```
+
+---
+
+## 2.2 Technology Stack
+
+The following table summarizes the core technologies used to build, deploy, and monitor the system:
+
+| Category | Technology | Version / Details | Purpose |
+| :--- | :--- | :--- | :--- |
+| **Cloud** | AWS EKS | v1.29 | Managed Kubernetes Control Plane |
+| **Cloud** | AWS EC2 | t3.small | Worker Nodes (Resource-constrained) |
+| **IaC** | Terraform | v1.x | Infrastructure as Code for VPC & EKS |
+| **Languages** | Java | 17 (OpenJDK) | Core Language for Microservices |
+| **Framework** | Spring Boot | 2.7.14 | Application Framework |
+| **Framework** | Spring Cloud | 2021.0.8 | Config, Eureka, Gateway |
+| **DB / Cache** | PostgreSQL | 15.x-alpine | Relational Database |
+| **DB / Cache** | Redis | 7.x-alpine | Caching & Rate Limiting |
+| **Messaging** | Apache Kafka | 6.2.1 (Confluent) | Event-driven Communication |
+| **CI/CD** | Jenkins | LTS | Pipeline Orchestration |
+| **Build Tool** | Kaniko | Latest | Daemonless Container Builds |
+| **Registry** | Docker Hub | Cloud | Container Image Repository |
+| **Observability** | Prometheus | v2.45 | Metrics Collection |
+| **Observability** | Grafana | Latest | Dashboards & Visualization |
+| **Observability** | AWS CloudWatch| Agent v1.3 | Centralized Logging |
+
+---

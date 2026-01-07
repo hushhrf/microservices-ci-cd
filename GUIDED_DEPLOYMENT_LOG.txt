@@ -1,0 +1,158 @@
+# 📜 Guided Deployment Command Log
+Date: 2026-01-07
+
+This file contains every command used during this session to rebuild the microservices environment.
+
+---
+## Step 1: AWS Credentials Update
+**Command:**
+```powershell
+# Copy and paste the credentials provided by the AWS Lab into ~/.aws/credentials
+$awsConfigFile = "$HOME/.aws/credentials"; 
+Set-Content -Path $awsConfigFile -Value $content -Force;
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 2: Terraform Initialization
+**Command:**
+```powershell
+cd terraform
+terraform init
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 3: Terraform Plan & Apply
+**Command:**
+```powershell
+terraform plan -out=tfplan
+terraform apply "tfplan"
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 4: Kubernetes Cluster Connection
+**Command:**
+```powershell
+aws eks update-kubeconfig --name microservices-cluster --region us-east-1
+kubectl get nodes
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 5: Create Namespaces
+**Command:**
+```powershell
+kubectl apply -f kubernetes/namespace.yaml
+kubectl apply -f kubernetes/jenkins/namespace.yaml
+```
+**Status:** COMPLETED ✅
+
+---
+## 🛠️ Troubleshooting: Kubectl Timeouts
+**Issue:** Connection aborted during namespace creation.
+**Action:** Retrying with `--validate=false`.
+**Command:**
+```powershell
+kubectl apply -f kubernetes/namespace.yaml --validate=false
+kubectl apply -f kubernetes/jenkins/namespace.yaml --validate=false
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 6: Deploy Database Secrets
+**Command:**
+```powershell
+kubectl apply -f kubernetes/secrets/db-secrets.yaml -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 7: Deploy Shared Infrastructure
+**Command:**
+```powershell
+kubectl apply -f kubernetes/infrastructure/postgres.yaml -n microservices
+kubectl apply -f kubernetes/infrastructure/redis.yaml -n microservices
+kubectl apply -f kubernetes/infrastructure/kafka.yaml -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 8: Verify Infrastructure Status
+**Command:**
+```powershell
+kubectl get pods -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 9: Deploy Core Microservices (Part 1 - Brain)
+**Command:**
+```powershell
+kubectl apply -f kubernetes/deployments/config-server.yaml -n microservices
+kubectl apply -f kubernetes/deployments/eureka-server.yaml -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## 🛠️ Troubleshooting: ConfigMap & Services Missing
+**Issue:** `config-server` failed and `eureka-server` stuck in Init.
+**Action:** Deploying ConfigMap and all Service objects.
+**Command:**
+```powershell
+kubectl apply -f kubernetes/configmaps/app-config.yaml -n microservices
+kubectl apply -f kubernetes/services/ -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 10: Deploy Core Microservices (Part 2 - Apps)
+**Command:**
+```powershell
+kubectl apply -f kubernetes/deployments/gateway.yaml -n microservices
+kubectl apply -f kubernetes/deployments/auth-service.yaml -n microservices
+kubectl apply -f kubernetes/deployments/user-service.yaml -n microservices
+kubectl apply -f kubernetes/deployments/job-service.yaml -n microservices
+kubectl apply -f kubernetes/deployments/notification-service.yaml -n microservices
+kubectl apply -f kubernetes/deployments/file-storage.yaml -n microservices
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 11: Deploy Jenkins (CI/CD)
+**Command:**
+```powershell
+kubectl apply -f kubernetes/jenkins/jenkins-sa.yaml -n jenkins
+kubectl apply -f kubernetes/jenkins/jenkins-deployment.yaml -n jenkins
+kubectl apply -f kubernetes/jenkins/jenkins-service.yaml -n jenkins
+```
+**Status:** COMPLETED ✅
+
+---
+## Step 12: View External LoadBalancers (URLs)
+**Command:**
+```powershell
+kubectl get svc gateway -n microservices
+kubectl get svc jenkins -n jenkins
+```
+**Status:** IN PROGRESS ⏳
+
+---
+## Step 13: Jenkins URL & Access
+**Action:** Access Jenkins via the LoadBalancer URL.
+**Command:**
+```powershell
+kubectl get svc jenkins -n jenkins
+```
+**Status:** IN PROGRESS ⏳
+
+---
+## Step 14: Configure Docker Hub Credentials
+**Action:** Store `dockerhub-credentials` as "Secret text" or "Username with password" in Jenkins.
+**Status:** PENDING 🕒
+
+---
+## Step 15: Create Jenkins Pipeline Job
+**Action:** Create a job pointing to the GitHub repo `hushhrf/microservices-ci-cd.git`.
+**Status:** PENDING 🕒

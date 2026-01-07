@@ -1,0 +1,56 @@
+# FINAL PROJECT COMPLETION & REPLICATION GUIDE
+================================================
+
+This document outlines exactly how we stabilized this microservices architecture on a budget (t3.small) EKS cluster. Use this to re-deploy everything from scratch.
+
+PHASE 1: INFRASTRUCTURE (TERRAFORM)
+-----------------------------------
+1.  Navigate to /terraform
+2.  Check 'vpc.tf' - Verify that subnet 'us-east-1e' is EXCLUDED from the locals block.
+3.  Command: terraform apply -auto-approve
+4.  Command: aws eks update-kubeconfig --name microservices-cluster --region us-east-1
+
+PHASE 2: CORE MICROSERVICES
+---------------------------
+1.  Apply Databases/Messaging first:
+    - kubectl apply -f kubernetes/infrastructure/postgres.yaml
+    - kubectl apply -f kubernetes/infrastructure/redis.yaml
+    - kubectl apply -f kubernetes/infrastructure/kafka.yaml
+2.  Wait for pods to be Running.
+3.  Apply Core Services:
+    - kubectl apply -f kubernetes/deployments/config-server.yaml
+    - kubectl apply -f kubernetes/deployments/eureka-server.yaml
+4.  Apply Application Layer:
+    - kubectl apply -f kubernetes/deployments/gateway.yaml
+    - kubectl apply -f kubernetes/deployments/auth-service.yaml
+    - kubectl apply -f kubernetes/deployments/user-service.yaml
+
+PHASE 3: CI/CD PIPELINE (JENKINS)
+---------------------------------
+1.  Apply Jenkins manifests: kubectl apply -f kubernetes/jenkins/
+2.  Enable external access: Change service type to LoadBalancer in jenkins-service.yaml.
+3.  Plugin Setup: Install "Kubernetes" and "Docker Pipeline" plugins.
+4.  Kaniko Optimization: In the Jenkinsfile, ensure 'snapshotMode' is set to 'redo' and memory limit is at least 512Mi.
+
+PHASE 4: MONITORING (SURVIVAL MODE)
+-----------------------------------
+1.  CRITICAL: Scale Jenkins to 0 to free up RAM before moving to monitoring.
+    - kubectl scale deployment jenkins -n jenkins --replicas=0
+2.  Deploy Monitoring Stack:
+    - kubectl apply -f kubernetes/monitoring/prometheus/
+    - kubectl apply -f kubernetes/monitoring/grafana/
+    - kubectl apply -f kubernetes/monitoring/cloudwatch-agent.yaml
+3.  Access via Port-Forwarding (Reliable):
+    - kubectl port-forward -n microservices svc/grafana 3000:80
+
+PHASE 5: CLEANUP (MANDATORY)
+----------------------------
+1.  Delete LoadBalancers first: kubectl delete svc --all -n microservices
+2.  Destroy Infrastructure: 
+    - cd terraform
+    - terraform destroy -auto-approve
+
+------------------------------------------------
+Architecture Credits: Antigravity AI
+Status: MISSION COMPLETE
+------------------------------------------------

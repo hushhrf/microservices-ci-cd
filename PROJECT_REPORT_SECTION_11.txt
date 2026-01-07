@@ -1,0 +1,37 @@
+# 11. Cost Management and Optimization
+
+## 11.1 Budget Constraints
+
+One of the defining constraints of this project was the operation within a limited student budget provided by the AWS Academy. 
+
+### 🎓 Limited Student Budget
+The AWS Academy Lab provides a fixed credit limit (usually around $100) for the entire course duration. This budget must cover all experimentation, failed attempts, and final deployments. A single forgotten EKS cluster running 24/7 could deplete this entire budget in less than a week.
+
+### 💰 AWS Cost Awareness
+This project cultivated a "Cloud Economist" mindset. Every resource provisioned was evaluated for its cost-to-benefit ratio. We moved away from the "infinite resource" myth of the cloud and treated our AWS credits as a finite and valuable resource.
+
+---
+
+## 11.2 Optimization Strategies
+
+To ensure successful completion without hitting the budget ceiling, we implemented a set of aggressive **"Budget-Survival"** strategies.
+
+### 📉 Scaling Jenkins Down When Idle
+The Jenkins master and its various plugins are memory-intensive. 
+*   **The Strategy**: Once the CI/CD pipeline successfully deployed the microservices, we manually scaled the Jenkins deployment to 0 replicas:
+    `kubectl scale deployment jenkins -n jenkins --replicas=0`
+*   **The Result**: This freed up nearly 800MB of RAM on the worker nodes, allowing us to deploy the Monitoring stack (Prometheus/Grafana) on the same hardware without having to provision expensive larger instances.
+
+### 🧹 Removing Monitoring When Not Needed
+The Monitoring stack itself (Prometheus and Grafana) consumes significant CPU and RAM for scraping and data storage. 
+*   **The Strategy**: We treated the monitoring stack as a "Diagnostic Tool" rather than a permanent fixture. We deployed it only when we needed to verify stability or debug a performance issue, then removed it once the analysis was complete.
+
+### 🌊 Mandatory Infrastructure Destruction
+The most effective cost-saving measure was the disciplined use of Terraform's lifecycle management.
+*   **The Strategy**: At the end of every working session, the command `terraform destroy` was executed. 
+*   **The Result**: This ensured that the EKS Control Plane ($0.10/hour), the EC2 Worker Nodes, and the Elastic Load Balancers were decommissioned during downtime. By only paying for resources when actively working, we extended our project timeline by several weeks within the same budget.
+
+### 📦 Optimized Resource Requests (Kubernetes)
+Inside Kubernetes, we didn't use the default settings. Every service was assigned strict **Resource Limits** (e.g., `memory: 256Mi`). By "right-sizing" our containers, we packed 10+ services onto just 2 small nodes, maximizing our "bang for the buck" on AWS.
+
+---

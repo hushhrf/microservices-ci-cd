@@ -1,0 +1,60 @@
+# 6. Infrastructure Provisioning with Terraform
+
+## 6.1 Why Terraform
+
+Terraform was chosen as the **Infrastructure as Code (IaC)** tool to manage the AWS resources. This approach provides several critical advantages:
+
+### ⚙️ Automation & Reproducibility
+Manually creating VPCs, Subnets, and EKS clusters in the AWS Console is prone to human error. With Terraform, the entire environment is defined in code, allowing us to recreate the identical infrastructure in minutes if a lab session expires or a new region is needed.
+
+### 📜 Version Control
+Infrastructure changes are tracked via Git. We can review exactly what changed between sessions, ensuring that the cluster configuration remains consistent across the team.
+
+### 🗑️ Efficient Lifecycle (Cleanup)
+Managing resources on a budget requires discipline. The `terraform destroy` command allows us to tear down all provisioned resources (EKS, Nodes, ELBs) with a single command, ensuring no accidental charges occur after a lab session is finished.
+
+---
+
+## 6.2 AWS Resources Provisioned
+
+The Terraform configuration managed the following core AWS components:
+
+1.  **VPC and Subnets**: 
+    *   To save time and stay within lab limits, we utilized the **Default VPC** and its pre-existing regional subnets. 
+    *   We selectively used subnets in `us-east-1a` through `us-east-1d`, carefully excluding **`us-east-1e`** due to its known incompatibility with EKS control planes in Academy environments.
+2.  **Security Groups**: 
+    *   Configured to allow internal communication between microservices.
+    *   Managed inbound access for the **API Gateway** and **Jenkins** to be reachable from the internet.
+3.  **EKS Cluster**: 
+    *   Provisioned **AWS EKS v1.29** as the managed Kubernetes control plane.
+    *   Managed the authentication mapping between AWS IAM (LabRole) and RBAC.
+4.  **EC2 Worker Nodes**: 
+    *   An **EKS Node Group** was created to manage the EC2 scaling and lifecycle.
+5.  **RDS Database**: 
+    *   Provisioned a **PostgreSQL (db.t3.micro)** instance for central data persistence. 
+    *   *Note*: This was later disabled to prioritize RAM for microservices and stay within the EKS node's limited capacity.
+
+---
+
+## 6.3 Terraform Structure
+
+The project follows a modular and clean structure to ensure maintainability:
+
+*   **`main.tf`**: Configures the AWS Provider and standard tags.
+*   **`variables.tf`**: Defines all inputs (Cluster name, instance types, region) with safe defaults.
+*   **`terraform.tfvars`**: Stores environment-specific values (e.g., your Docker Hub IDs or Region) without modifying the logic files.
+*   **`vpc.tf` & `eks.tf`**: Modularized resource definitions for clear separation of concerns.
+*   **Outputs**: At the end of `terraform apply`, the system automatically prints the Cluster Endpoint and the `update-kubeconfig` command for easy developer access.
+
+---
+
+## 6.4 Cost-Aware Decisions
+
+Since the AWS Academy environment is resource-constrained, the Terraform code was optimized for **Budget-Survival**:
+
+*   **Smallest Viable Nodes**: We standardized on **`t3.small`** instances (2GB RAM). While minimal, they were sufficient to run the basic microservices.
+*   **Controlled Node Count**: The cluster was limited to **2 nodes**. This forced us to be efficient with Kubernetes resource limits (requests/limits) and prevented excessive EC2 costs.
+*   **On-Demand Teardown**: By using `terraform destroy` after every session, we reduced the project's cumulative cloud spend by over 80% compared to leaving the cluster running 24/7.
+*   **Avoiding Managed NAT**: By using the default VPC's public subnets, we avoided the high hourly cost of Managed NAT Gateways, which is the #1 cost-sink in small EKS projects.
+
+---

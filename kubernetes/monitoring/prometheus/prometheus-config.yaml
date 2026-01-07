@@ -40,8 +40,19 @@ data:
         - source_labels: [__meta_kubernetes_pod_label_app]
           action: keep
           regex: .+
-        - source_labels: [__meta_kubernetes_pod_ip]
+        - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_label_app]
           action: replace
+          regex: ([^;]+);eureka-server
+          target_label: __address__
+          replacement: $1:8761
+        - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_label_app]
+          action: replace
+          regex: ([^;]+);config-server
+          target_label: __address__
+          replacement: $1:8888
+        - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_label_app]
+          action: replace
+          regex: ([^;]+);(auth-service|gateway|user-service|notification-service|job-service|file-storage)
           target_label: __address__
           replacement: $1:8080
         - source_labels: [__meta_kubernetes_pod_label_app]
@@ -56,11 +67,10 @@ metadata:
   name: prometheus
   namespace: microservices
 spec:
-  type: NodePort
+  type: LoadBalancer
   ports:
-    - port: 9090
+    - port: 80
       targetPort: 9090
-      nodePort: 30090
       protocol: TCP
   selector:
     app: prometheus

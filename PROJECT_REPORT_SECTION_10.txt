@@ -1,0 +1,33 @@
+# 10. Logging and Metrics with AWS CloudWatch
+
+## 10.1 CloudWatch Integration
+
+While Prometheus handles real-time metrics, **AWS CloudWatch** was integrated as the source of truth for long-term centralized logging and system-level performance.
+
+### 📜 Centralized Logging
+In a Kubernetes environment, logs are ephemeral. If a pod crashes and restarts, its local logs are lost forever. We implemented a **CloudWatch Agent DaemonSet** across the cluster to solve this:
+*   **Automatic Collection**: The agent runs on every EC2 worker node and automatically monitors the `/var/log/containers/*.log` path.
+*   **Log Groups**: Logs are streamed in real-time to a central Log Group: `/aws/eks/microservices-cluster/containers`.
+*   **Service Isolation**: Each microservice (e.g., `auth-service`, `gateway`) has its own dedicated log stream, making it easy to search and filter logs for specific components.
+
+### 🖥️ EC2 and Container Metrics
+Beyond just text logs, the CloudWatch Agent was configured to collect host-level metrics that EKS doesn't natively expose, such as **Disk Usage Percentage** and **Network TCP Established** counts. This provides a complete view of the infrastructure health from the hardware level up to the application level.
+
+---
+
+## 10.2 Benefits of CloudWatch
+
+### ☁️ AWS-Native Monitoring
+Because CloudWatch is an AWS-native service, it integrates seamlessly with our EKS cluster without requiring external servers or complex database management. It leverages the existing **IAM LabRole** for secure authentication, ensuring our logs never leave the AWS internal network.
+
+### 📂 Long-Term Log Retention
+Unlike our Prometheus setup, which was optimized for short-term (2 hour) troubleshooting to save RAM, CloudWatch allows for flexible, long-term retention. This is critical for:
+*   **Post-Mortem Analysis**: Investigating why a build failed 3 days ago.
+*   **Compliance**: Maintaining a trail of security events and system interactions.
+
+### 🚨 Dynamic Alerts & Metrics
+While implemented conceptually in our report, CloudWatch provides the foundation for:
+*   **CloudWatch Alarms**: Automatically notifying an administrator via SNS (email/SMS) if a service crashes or if CPU usage exceeds a threshold.
+*   **Custom Dashboards**: Creating a high-level executive view of the entire AWS account's health alongside the internal Kubernetes metrics.
+
+---

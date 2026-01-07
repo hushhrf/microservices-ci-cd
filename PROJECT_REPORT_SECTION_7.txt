@@ -1,0 +1,48 @@
+# 7. Kubernetes Architecture and Deployment
+
+## 7.1 Kubernetes Cluster Architecture
+
+The project leverages **Amazon EKS** to provide a production-ready Kubernetes environment. The architecture is split into two distinct planes:
+
+### 🧩 Control Plane
+Managed entirely by **AWS EKS**. This "brain" of the cluster handles API requests ($kubectl$), schedules pods on nodes, and ensures the desired state of our applications is always met. Being a managed service, it provides high availability and automatic security updates.
+
+### 🏗️ Worker Nodes
+The data plane consists of **EC2 t3.small** instances. These nodes run the actual container workloads and the core Kubernetes components ($kubelet$, $kube-proxy$, $containerd$).
+
+### 📂 Logical Separation (Namespaces)
+We used Kubernetes **Namespaces** to isolate different parts of our system, preventing resource and naming conflicts:
+*   **`microservices`**: The core environment containing all 8 Java services, databases (Postgres/Redis), and messaging (Kafka).
+*   **`jenkins`**: A dedicated space for CI/CD tools, build agents, and build history.
+*   **`kube-system`**: Reserved for internal Kubernetes and AWS components (AWS CNI, CoreDNS).
+
+---
+
+## 7.2 Kubernetes Objects Used
+
+To manage our microservices, we utilized several different types of Kubernetes "Objects":
+
+1.  **Deployments**: 
+    *   Defines the "desired state" for our apps (e.g., "Run exactly 1 replica of the Auth Service"). 
+    *   Handles **Rolling Updates**, allowing us to push new Docker images without downtime.
+2.  **Services**:
+    *   **ClusterIP**: Used for internal communication. For example, the User Service talks to Postgres via `postgres-service:5432`.
+    *   **LoadBalancer**: Used for external entry points. The **API Gateway**, **Grafana**, and **Jenkins** use this to get a public AWS Elastic Load Balancer (ELB) address.
+3.  **ConfigMaps**:
+    *   Used to inject non-sensitive environment variables (like Eureka URLs or Kafka broker addresses) into the containers.
+4.  **Secrets**:
+    *   Used for sensitive data. Database passwords and Docker Hub tokens were stored as Kubernetes Secrets and injected into pods as environment variables at runtime.
+
+---
+
+## 7.3 Application Deployment Flow
+
+The transformation from "Code" to "Running Pod" follows this automated step-by-step flow:
+
+1.  **Image Retrieval**: The Kubernetes `kubelet` on a worker node pulls the specified image (e.g., `hushhrf/gateway:latest`) from **Docker Hub**.
+2.  **Pod Creation**: A **Pod** (the smallest unit in Kubernetes) is created. It encapsulates the container and is assigned a unique IP address within the cluster network.
+3.  **Initialization**: If defined, an `initContainer` runs first (e.g., waiting for the Config Server or Eureka to be ready) before the main Spring Boot application starts.
+4.  **Connectivity**: A **Service** object acts as a stable DNS name and load balancer for the Pod. When a user hits the Gateway URL, the Service routes the traffic to the healthy Pod inside the cluster.
+5.  **Steady State**: Kubernetes continuously monitors the Pod's health. If a container crashes, the Deployment controller automatically restarts it to maintain availability.
+
+---

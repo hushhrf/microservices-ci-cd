@@ -1,0 +1,48 @@
+# 3. Microservices Architecture
+
+## 3.1 Microservices Design
+
+The system was built using a **microservices-based architecture** to address the complexities of modern, distributed applications.
+
+### 💡 Why Microservices?
+A monolithic architecture was avoided to gain several strategic benefits:
+*   **Scalability**: Individual services (like the Gateway or Notification Service) can be scaled independently based on their specific resource load without duplicating the entire application.
+*   **Isolation**: Faults are contained. A failure in the File Storage service will not prevent users from logging in via the Auth Service.
+*   **Independent Deployment**: Each service has its own lifecycle, allowing the team to update the "User Service" without redeploying the "Job Service."
+
+### 📡 Communication Style
+*   **Synchronous (REST)**: External requests from the User enter via the **Gateway** and are routed to functional services (Auth, User, Job) using standard **REST over HTTP**.
+*   **Asynchronous (Event-Driven)**: High-latency or decoupled tasks (like sending emails) are handled via **Apache Kafka**. This ensures the system remains responsive while long-running tasks process in the background.
+*   **Service Discovery**: Services do not use hardcoded IPs; instead, they register with **Netflix Eureka**, allowing dynamic load balancing and lookup.
+
+---
+
+## 3.2 Description of Each Microservice
+
+All microservices are built using **Java 17** and **Spring Boot 2.7.14**.
+
+| Service Name | Primary Role | Port | Key Dependencies |
+| :--- | :--- | :--- | :--- |
+| **Config Server** | Centralized configuration management for all services. | 8888 | Local/Git Storage |
+| **Eureka Server** | Service Registry used for service discovery. | 8761 | N/A (Registry) |
+| **API Gateway** | Entry point for all users. Handles routing and security. | 8080 | Eureka, Config Server |
+| **Auth Service** | Manages user identity, JWT generation, and security. | 8080 | Postgres, Redis, Eureka |
+| **User Service** | Handles user profiles, registrations, and account data. | 8080 | Postgres, Eureka |
+| **Job Service** | Manages job listings, applications, and vacancies. | 8080 | Postgres, Eureka |
+| **Notification Svc**| Processes and sends alerts/notifications. | 8080 | Kafka, Eureka |
+| **File Storage Svc**| Manages file uploads and storage metadata. | 8080 | Postgres, Eureka |
+
+---
+
+## 3.3 Configuration Management
+
+### Centralized Configuration with Spring Cloud Config
+In this architecture, we utilized **Spring Cloud Config** to manage application properties across all environments.
+
+### 🎯 Why Centralized Configuration?
+1.  **Uniformity**: Instead of managing separate `.properties` or `.yaml` files inside 8 different Git repositories, all configurations are managed in one place.
+2.  **Runtime Updates**: Configurations can be refreshed without restarting the microservices (using `@RefreshScope`).
+3.  **Environment Sync**: It ensures that variables like `DATABASE_URL` or `KAFKA_BROKER` are consistent across the Gateway, User Service, and Auth Service instantly.
+4.  **Security**: Secrets and sensitive keys are managed centrally, reducing the risk of accidental exposure in multiple service repos.
+
+---

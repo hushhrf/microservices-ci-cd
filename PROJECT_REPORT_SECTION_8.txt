@@ -1,0 +1,64 @@
+# 8. CI/CD Pipeline with Jenkins
+
+## 8.1 Why Jenkins
+
+Jenkins was implemented as the central automation engine for this project. In a microservices environment, manual deployments are impossible due to the sheer number of services (8 in this project). 
+
+### ⚙️ Automation and Consistency
+Jenkins ensures that every service follows the exact same build-test-deploy lifecycle. This eliminates manual errors and guarantees that the image currently running in AWS EKS matches the source code in GitHub.
+
+### 🧩 Seamless Integration
+Jenkins acted as the "glue" between our disparate tools:
+*   **GitHub Integration**: Automatically triggers builds when code is pushed.
+*   **Kubernetes Integration**: Uses the **Kubernetes Plugin** to dynamically spin up build agents as ephemeral pods, keeping the cluster clean when no builds are running.
+
+---
+
+## 8.2 Jenkins Deployment Strategy
+
+To maximize efficiency and reliability, we chose a **"Jenkins on Kubernetes"** architecture.
+
+### 🏗️ Internal Deployment
+Jenkins was deployed directly into the EKS cluster within the `jenkins` namespace. This allowed it to communicate with the Kubernetes API locally, providing faster and more secure deployments compared to an external Jenkins server.
+
+### 🚀 Dynamic Kubernetes Agents
+Instead of using fixed "Static Agents," we utilized **Kubernetes Agent Pods**. For every build:
+1.  A temporary pod is launched in the cluster.
+2.  The pod contains four specialized containers: `jnlp` (agent hub), `maven` (compile), `kaniko` (image build), and `kubectl` (deploy).
+3.  Once the build is complete, the pod is automatically destroyed, freeing up RAM for our microservices.
+
+### 📉 Resource Optimization (Survival Mode)
+Because we were running on **t3.small** nodes (2GB RAM), we implemented strict resource limits:
+*   **Maven**: Restricted to 384MB.
+*   **Kaniko**: Restricted to 512MB.
+*   This ensured the build pods didn't "starve" the core microservices and caused the cluster to restart.
+
+---
+
+## 8.3 Jenkins Pipeline (Jenkinsfile)
+
+The entire logic is stored in a **declarative `Jenkinsfile`** in the project root.
+
+### 🛤️ Build Stages:
+1.  **Checkout**: Pulls the latest code from the GitHub repository using SSH/HTTPS credentials.
+2.  **Service Build Loop**: The pipeline iterates through all 8 services:
+    *   **Maven Build**: Compiles the Java code and generates a JAR file using `mvn clean package`.
+    *   **Docker Build (Kaniko)**: Takes the JAR file and turns it into a container image.
+    *   **Push**: Authenticates with Docker Hub and pushes the tagged image.
+    *   **Deploy (Kubectl)**: Applies the Kubernetes YAML manifests and performs a `rollout restart` to ensure the new image is pulled immediately.
+
+---
+
+## 8.4 Kaniko in the Pipeline
+
+One of the most advanced parts of this project was the use of **Kaniko** instead of standard Docker builds.
+
+### 🛡️ Why Avoid "Docker-in-Docker" (DinD)?
+Standard `docker build` requires a privileged "Docker Daemon" (DinD). This is a known security risk and is highly memory-intensive. In a shared EKS environment like AWS Academy, DinD is often restricted or unstable.
+
+### ✅ The Kaniko Advantage:
+*   **Daemon-less**: Kaniko builds container images from inside a container without needing a Docker daemon.
+*   **Non-Privileged**: It runs as a standard user process, making it significantly more secure for Kubernetes environments.
+*   **Optimized for Small RAM**: We used the `--snapshotMode=redo` flag. This prevents Kaniko from storing huge file system snapshots in RAM, allowing it to build 200MB+ Spring Boot images on a tiny 512MB memory limit.
+
+---
