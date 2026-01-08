@@ -29,7 +29,7 @@ spec:
             - name: JENKINS_OPTS
               value: "--prefix=/jenkins"
             - name: JAVA_OPTS
-              value: "-Djenkins.install.runSetupWizard=true -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=false"
+              value: "-Djenkins.install.runSetupWizard=true -Dhudson.security.csrf.GlobalCrumbIssuerConfiguration.DISABLE_CSRF_PROTECTION=true"
             - name: JAVA_TOOL_OPTIONS
               value: "-Xmx256M -Xms128M"
           volumeMounts:
@@ -53,10 +53,9 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              memory: "512Mi"
-              cpu: "250m"
+              memory: "256Mi"
             limits:
-              memory: "1Gi"
+              memory: "768Mi"
               cpu: "500m"
       volumes:
         - name: jenkins-home
